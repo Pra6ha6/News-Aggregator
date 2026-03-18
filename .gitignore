@@ -1,0 +1,8 @@
+.env
+*.json
+env_backup.txt
+__pycache__/
+.venv/
+.streamlit/
+requirements.txt
+# Except google_creds.json is already caught by *.json, which is good.
