@@ -129,19 +129,28 @@ def main():
                             with st.container(border=True):
                                 # Header
                                 h_col1, h_col2 = st.columns([4, 1])
-                                # Use the specific topic as the title for clarity
                                 with h_col1: st.subheader(topic.title())
                                 with h_col2: st.caption(f"🛡️ {summary_data['depth']}")
                                 
-                                st.write(summary_data["factual_core"])
+                                # 1. Narrative Points
+                                for p in summary_data["points"]:
+                                    st.markdown(f"• {p}")
                                 
-                                # Source Attribution (Strictly Diverse)
+                                # 2. Key Facts Section (New in Phase 15)
+                                if summary_data["facts"]:
+                                    st.write("---")
+                                    st.write("**📍 Key Facts & Entities:**")
+                                    fact_cols = st.columns(len(summary_data["facts"]) if len(summary_data["facts"]) < 4 else 4)
+                                    for i, fact in enumerate(summary_data["facts"][:4]):
+                                        fact_cols[i % 4].caption(f"🔹 {fact}")
+                                
+                                # 3. Source Attribution
+                                st.write("---")
                                 st.write("**Perspective Diversity:**")
                                 source_html = " ".join([f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{s["name"]}</a>' for s in summary_data["sources"][:5]])
                                 st.markdown(source_html, unsafe_allow_html=True)
                                 
-                                st.divider()
-                                # Bias Meter
+                                # 4. Bias Meter
                                 score = summary_data["bias_score"]
                                 b_cols = st.columns([1, 4])
                                 with b_cols[0]: st.caption(f"Leaning Guard: {score}/100")
