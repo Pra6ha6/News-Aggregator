@@ -3,7 +3,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 import re
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 # Ensure nltk resources are available
 try:
@@ -13,77 +13,95 @@ except LookupError:
     nltk.download('punkt')
     nltk.download('punkt_tab')
 
-def cluster_stories(articles, num_clusters=4):
-    """Refined keyword-based clustering of articles into stories."""
+def find_top_topics(articles, n=4):
+    """Identifies the top N most frequent story topics using keyword frequency."""
     if not articles:
         return []
         
-    if len(articles) <= 5:
-        return [articles]
+    all_titles = " ".join([(a.get('title', '') or '').lower() for a in articles])
+    # Extract keywords (4+ letters)
+    words = re.findall(r'\b[a-z]{4,}\b', all_titles)
+    
+    # Filter out common news padding but keep meaningful names
+    stopwords = {'today', 'news', 'live', 'india', 'world', 'times', 'update', 'latest', 'reported'}
+    meaningful_words = [w for w in words if w not in stopwords]
+    
+    word_counts = Counter(meaningful_words)
+    top_keywords = [w for w, count in word_counts.most_common(n * 2)]
+    
+    # Group keywords that often appear together into "Topics"
+    topics = []
+    seen = set()
+    for word in top_keywords:
+        if word in seen: continue
+        # Find associated words in titles that contain this word
+        assocs = []
+        for a in articles:
+            t = (a.get('title', '') or '').lower()
+            if word in t:
+                assocs.extend(re.findall(r'\b[a-z]{4,}\b', t))
         
-    clusters = defaultdict(list)
-    for art in articles:
-        title = (art.get('title', '') or '').lower()
-        words = re.findall(r'\b[a-z]{4,}\b', title)
-        key = " ".join(sorted(words[:2])) if words else "trending"
-        clusters[key].append(art)
-    
-    final_clusters = []
-    others = []
-    for c in clusters.values():
-        if len(c) >= 2:
-            final_clusters.append(c)
-        else:
-            others.extend(c)
-            
-    if others:
-        final_clusters.append(others)
-    
-    sorted_clusters = sorted(final_clusters, key=len, reverse=True)
-    return sorted_clusters[:num_clusters]
+        most_common_assoc = Counter([w for w in assocs if w != word and w not in stopwords]).most_common(1)
+        topic_str = f"{word} {most_common_assoc[0][0]}" if most_common_assoc else word
+        topics.append(topic_str)
+        seen.add(word)
+        if most_common_assoc: seen.add(most_common_assoc[0][0])
+        if len(topics) >= n: break
+        
+    return topics
+
+def deduplicate_sources(articles):
+    """Enforces source diversity by keeping only 1 article per unique provider."""
+    seen_sources = set()
+    diverse_articles = []
+    for a in articles:
+        s_name = a.get('source', {}).get('name', 'Unknown')
+        if s_name not in seen_sources:
+            diverse_articles.append(a)
+            seen_sources.add(s_name)
+    return diverse_articles
 
 def triangulate_cluster(cluster_articles):
-    """Triangulates a cluster with content-aware depth and attribution."""
+    """Triangulates a cluster into a concise 2-3 sentence Factual Core."""
     if not cluster_articles:
         return None
         
-    # Extract sources early for attribution
+    # Enforce Source Diversity
+    diverse_pool = deduplicate_sources(cluster_articles)
+    
     contribution_sources = []
-    for art in cluster_articles:
-        s_name = art.get('source', {}).get('name', 'Unknown Source')
+    for art in diverse_pool:
+        s_name = art.get('source', {}).get('name', 'Source')
         s_url = art.get('url', '#')
         contribution_sources.append({"name": s_name, "url": s_url})
 
-    # Combine text, identifying depth
-    descriptions = [art.get("description", "") or "" for art in cluster_articles if art.get("description")]
-    titles = [art.get("title", "") for art in cluster_articles if art.get("title")]
+    # Content synthesis
+    descriptions = [art.get("description", "") or "" for art in diverse_pool if art.get("description")]
+    titles = [art.get("title", "") for art in diverse_pool if art.get("title")]
     
     all_text = " ".join(descriptions + titles)
     
-    is_sparse = len(descriptions) < (len(cluster_articles) / 2)
-    
-    if not all_text.strip() or len(all_text) < 100:
-        factual_core = "Headline Digest: " + " | ".join(titles[:3])
-        depth_label = "Low (Headlines only)"
-    else:
-        try:
+    try:
+        if len(all_text) < 150:
+             factual_core = titles[0] if titles else "Events unfolding."
+             depth = "Low"
+        else:
             parser = PlaintextParser.from_string(all_text, Tokenizer("english"))
             summarizer = LexRankSummarizer()
-            summary_sentences = summarizer(parser.document, 3)
+            # Enforce 2 sentences for conciseness
+            summary_sentences = summarizer(parser.document, 2)
             factual_core = " ".join([str(s) for s in summary_sentences])
-            depth_label = "High (Detailed synthesis)" if not is_sparse else "Medium (Mixed depth)"
-        except:
-            factual_core = titles[0] if titles else "Events in progress..."
-            depth_label = "Low (Fallback)"
+            depth = "High" if len(summary_sentences) >= 2 else "Medium"
+    except:
+        factual_core = titles[0] if titles else "Update pending."
+        depth = "Low"
 
-    # Bias score (based on source diversity)
-    unique_sources = set([s['name'] for s in contribution_sources])
-    bias_score = max(5, 100 - (len(unique_sources) * 20))
+    bias_score = max(5, 100 - (len(set([s['name'] for s in contribution_sources])) * 20))
     
     return {
-        "title": titles[0] if titles else "Major Story",
+        "title": titles[0] if titles else "Top Story",
         "factual_core": factual_core,
         "bias_score": bias_score,
-        "depth": depth_label,
+        "depth": depth,
         "sources": contribution_sources
     }

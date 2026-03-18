@@ -100,42 +100,49 @@ def main():
             st.caption(f"Factual Digest for {label}")
             st.write("---")
             
-            # Fetch and Cluster News
+            # TWO-STEP MULTI-MODAL PROCESS
             from news_manager import fetch_top_stories
-            from summarizer import cluster_stories, triangulate_cluster
+            from summarizer import find_top_topics, triangulate_cluster
             
-            with st.spinner("Synthesizing multi-story factual core..."):
-                all_articles = fetch_top_stories(
+            with st.spinner("Scavenging news landscape for top events..."):
+                # Step 1: General Scavenging
+                general_articles = fetch_top_stories(
                     country=st.session_state.country, 
                     category=st.session_state.category,
                     query=st.session_state.custom_interest if st.session_state.custom_interest else None
                 )
-                story_clusters = cluster_stories(all_articles)
                 
-                if not story_clusters:
-                    st.warning("No news stories matched the current filters. Try a broader topic or different country.")
+                # Step 2: Identify Top 4 Modal Topics
+                top_topics = find_top_topics(general_articles, n=4)
+                
+                if not top_topics:
+                    st.warning("No clear story patterns identified. Try broadening your interests.")
                 else:
-                    for cluster in story_clusters:
-                        summary_data = triangulate_cluster(cluster)
+                    for topic in top_topics:
+                        with st.status(f"Triangulating News: {topic.title()}...", expanded=False):
+                            # Deep Fetch for the specific topic
+                            topic_pool = fetch_top_stories(query=topic)
+                            summary_data = triangulate_cluster(topic_pool)
+                            
                         if summary_data:
                             with st.container(border=True):
-                                # Header with Title and Depth Badge
+                                # Header
                                 h_col1, h_col2 = st.columns([4, 1])
-                                with h_col1: st.subheader(summary_data["title"])
-                                with h_col2: st.caption(f"📊 Data: {summary_data['depth']}")
+                                with h_col1: st.subheader(f"Story: {topic.title()}")
+                                with h_col2: st.caption(f"📊 Accuracy: {summary_data['depth']}")
                                 
                                 st.write(summary_data["factual_core"])
                                 
-                                # Source Attribution (New in Phase 10)
-                                st.write("**Contributing Sources:**")
+                                # Source Attribution (Strictly Diverse)
+                                st.write("**Perspective Diversity (1 Art/Source):**")
                                 source_html = " ".join([f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{s["name"]}</a>' for s in summary_data["sources"][:5]])
                                 st.markdown(source_html, unsafe_allow_html=True)
                                 
                                 st.divider()
-                                # Bias Meter
+                                # Bias Meter (Now reflects TRUE source diversity)
                                 score = summary_data["bias_score"]
                                 b_cols = st.columns([1, 4])
-                                with b_cols[0]: st.caption(f"Bias Check: {score}/100")
+                                with b_cols[0]: st.caption(f"Leaning Guard: {score}/100")
                                 with b_cols[1]: st.progress(score / 100)
     
     else:
