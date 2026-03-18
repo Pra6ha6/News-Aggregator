@@ -122,24 +122,26 @@ def main():
                         with st.status(f"Triangulating News: {topic.title()}...", expanded=False):
                             # Deep Fetch for the specific topic
                             topic_pool = fetch_top_stories(query=topic)
-                            summary_data = triangulate_cluster(topic_pool)
+                            # Pass topic for relevance filtering
+                            summary_data = triangulate_cluster(topic_pool, topic_query=topic)
                             
                         if summary_data:
                             with st.container(border=True):
                                 # Header
                                 h_col1, h_col2 = st.columns([4, 1])
-                                with h_col1: st.subheader(f"Story: {topic.title()}")
-                                with h_col2: st.caption(f"📊 Accuracy: {summary_data['depth']}")
+                                # Use the specific topic as the title for clarity
+                                with h_col1: st.subheader(topic.title())
+                                with h_col2: st.caption(f"🛡️ {summary_data['depth']}")
                                 
                                 st.write(summary_data["factual_core"])
                                 
                                 # Source Attribution (Strictly Diverse)
-                                st.write("**Perspective Diversity (1 Art/Source):**")
+                                st.write("**Perspective Diversity:**")
                                 source_html = " ".join([f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{s["name"]}</a>' for s in summary_data["sources"][:5]])
                                 st.markdown(source_html, unsafe_allow_html=True)
                                 
                                 st.divider()
-                                # Bias Meter (Now reflects TRUE source diversity)
+                                # Bias Meter
                                 score = summary_data["bias_score"]
                                 b_cols = st.columns([1, 4])
                                 with b_cols[0]: st.caption(f"Leaning Guard: {score}/100")
