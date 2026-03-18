@@ -2,6 +2,7 @@ import nltk
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
+from deep_translator import GoogleTranslator
 import re
 from collections import defaultdict, Counter
 
@@ -14,7 +15,6 @@ except LookupError:
     nltk.download('punkt_tab')
 
 def find_top_topics(articles, n=4):
-    """Identifies highly specific N topics using multi-word frequency."""
     if not articles:
         return []
     all_titles = " ".join([(a.get('title', '') or '').lower() for a in articles])
@@ -45,7 +45,6 @@ def find_top_topics(articles, n=4):
     return topics
 
 def deduplicate_sources(articles, topic_query=None):
-    """Enforces source diversity and filters for topic relevance."""
     seen_sources = set()
     diverse_articles = []
     keywords = set(topic_query.lower().split()) if topic_query else set()
@@ -59,52 +58,74 @@ def deduplicate_sources(articles, topic_query=None):
             seen_sources.add(s_name)
     return diverse_articles if diverse_articles else articles[:3]
 
+def safe_translate(text):
+    """Translates text to English if needed."""
+    if not text or len(text) < 10: return text, False
+    try:
+        # Check if contains non-ASCII characters as a proxy for non-English
+        if any(ord(char) > 127 for char in text[:100]):
+            translated = GoogleTranslator(source='auto', target='en').translate(text)
+            return translated, True
+    except:
+        pass
+    return text, False
+
 def extract_key_facts(text):
-    """Extracts unique proper nouns and entities as key facts."""
-    # Light-weight regex entity extraction (Proper nouns, Numbers, $ amounts)
     potential_facts = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b|\$\d+(?:\.\d+)?m?b?|\d{1,3}%\b', text)
     noise = {'The', 'This', 'That', 'News', 'Today', 'Live', 'India', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'}
     unique_facts = sorted(list(set([f for f in potential_facts if f not in noise])), key=len, reverse=True)
     return unique_facts[:5]
 
 def triangulate_cluster(cluster_articles, topic_query=None):
-    """Synthesizes a structured Factual Core with separate points and facts."""
-    if not cluster_articles:
-        return None
+    if not cluster_articles: return None
     diverse_pool = deduplicate_sources(cluster_articles, topic_query)
     
-    # 1. Metatada & Attribution
-    contribution_sources = [{"name": a.get('source', {}).get('name', 'Source'), "url": a.get('url', '#')} for a in diverse_pool]
+    contribution_sources = []
+    any_translated = False
     
-    # 2. Extract Data
-    descriptions = [art.get("description", "") or "" for art in diverse_pool if art.get("description")]
-    titles = [art.get("title", "") for art in diverse_pool if art.get("title")]
-    full_text = " ".join(descriptions + titles)
+    processed_texts = []
+    processed_titles = []
     
-    # 3. Summarize into Points
+    for art in diverse_pool:
+        raw_title = art.get('title', '')
+        raw_desc = art.get('description', '')
+        
+        title, t1 = safe_translate(raw_title)
+        desc, t2 = safe_translate(raw_desc)
+        
+        if t1 or t2: any_translated = True
+        
+        processed_titles.append(title)
+        processed_texts.append(desc or title)
+        
+        contribution_sources.append({
+            "name": art.get('source', {}).get('name', 'Source'),
+            "url": art.get('url', '#'),
+            "translated": t1 or t2
+        })
+    
+    full_text = " ".join(processed_texts)
+    
     points = []
     try:
         parser = PlaintextParser.from_string(full_text, Tokenizer("english"))
         summarizer = LexRankSummarizer()
         summary_sentences = summarizer(parser.document, 3)
         points = [str(s).strip() for s in summary_sentences if len(str(s)) > 30]
-        # Basic narrative connector logic
-        if len(points) > 1: points[1] = "Furthermore, " + points[1]
+        if len(points) > 1: points[1] = "Additionally, " + points[1]
     except:
-        points = titles[:2]
+        points = processed_titles[:2]
 
-    # 4. Extract Key Facts
     key_facts = extract_key_facts(full_text)
-    
-    # Check depth
-    depth = "Synthesized Core" if len(points) >= 2 else "Headline Digest"
+    depth = "Universal Digest" if any_translated else "Synthesized Core"
     bias_score = max(5, 100 - (len(set([s['name'] for s in contribution_sources])) * 20))
     
     return {
-        "title": titles[0] if titles else "Major Story",
+        "title": processed_titles[0] if processed_titles else "Top Story",
         "points": points,
         "facts": key_facts,
         "bias_score": bias_score,
         "depth": depth,
+        "translated": any_translated,
         "sources": contribution_sources
     }

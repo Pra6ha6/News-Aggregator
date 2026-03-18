@@ -1,53 +1,44 @@
 # 📰 Zen News: Privacy-First Neutral News Aggregator
 
-Zen News is a minimalist, privacy-focused news aggregator that "triangulates" multiple perspectives to find the **Factual Core** of any story. It uses a local NLP pipeline (LexRank) to ensure neutral reporting without the bias of sensationalist headlines.
+Zen News is a state-of-the-art, privacy-focused news aggregator that "triangulates" multiple perspectives to find the **Factual Core** of any story. It uses a custom Multi-Modal NLP pipeline to ensure high-accuracy, neutral reporting with zero data leakage.
 
 ## 🚀 Key Features
 
-- **Multi-Story Triangulation**: Automatically groups headlines into 3-4 major daily news events for a comprehensive digest.
-- **Global reach**: Support for coverage in over 50+ countries (searchable via the RHS panel).
-- **Custom Interests**: Type in any topic (e.g., "AI", "Cricket", "SpaceX") to get a multi-perspective factual core immediately.
-- **Local NLP Engine**: Privacy-first summarization using `sumy` (LexRank), eliminating external LLM API dependencies for core features.
-- **Zen UI**: Clean, distraction-free interface with a dedicated Right-Hand Side (RHS) control panel.
-- **Guest Access**: Immediate access to neutral news without requiring a login.
-- **Daily Digest**: (Coming Soon) Scheduled personalized neutral summaries via email/push.
-- **Source Transparency**: A universal toggle to see the original diverse sources for every summary.
+- **Multi-Modal Triangulation**: A two-step process that scavenges the general news landscape, identifies top "modal" topics, and performs deep-dive multi-source searches for each event.
+- **Universal Translation**: Automatic language detection and translation (🌐) for non-English sources, enabling a global factual core from anywhere in the world.
+- **Point-by-Point Synthesis**: Summaries are structured into scannable bullet points for clarity and speed.
+- **Dedicated Fact Extraction**: Each story includes a "**📍 Key Facts & Entities**" section pulling names, locations, and data points directly from the triangulation pool.
+- **Maximum Perspective Diversity**: Strict **1-Article-per-Source** rule ensures every digest reflects 4-5 unique providers.
+- **Global reach**: Support for over 50+ countries with automatic fallback for regional news availability.
+- **Custom Interests**: Real-time factual core generation for any user-input topic.
+- **Zen UI**: Minimalist, high-performance dashboard with a dedicated Topic Control panel.
 
 ## 🛠️ Security & Privacy Audit
 
 - ✅ **No Tracking**: Zero third-party scripts, analytic pixels, or CDNs.
 - ✅ **Zero Indexing**: Configured to prevent search engine indexing.
 - ✅ **Encrypted Preferences**: User settings stored securely in Supabase.
-- ✅ **Privacy-First Backend**: Local NLP processing ensures your interests never leave the server.
+- ✅ **Secure Git**: Sanitized repository history with all secrets excluded.
 
 ## 📦 Setup & Installation
 
-1. **Clone the repository**:
+1. **Clone & Install**:
    ```bash
    git clone https://github.com/Pra6ha6/News-Aggregator.git
    cd News-Aggregator
-   ```
-
-2. **Install dependencies**:
-   ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Secrets**:
-   Create an `env_backup.txt` (or `.env` which is ignored) based on the following template (no real keys are included in the repo!):
-   - `NEWS_API_KEY`: Get one from [newsapi.org](https://newsapi.org/)
-   - `SUPABASE_URL` / `SUPABASE_KEY`: From your Supabase project.
-
-4. **Run the App**:
+2. **Run the App**:
    ```bash
    streamlit run app.py
    ```
 
-## 📜 Methodology: Triangulation
+## 📜 Methodology: The Neutrality Engine
 
-Zen News fetches top headlines from three distinct categories:
-1. **Neutral**: High-fact, low-bias wires (AP, Reuters).
-2. **Left**: Reporting from a left-leaning perspective.
-3. **Right**: Reporting from a right-leaning perspective.
-
-The **Heuristic Clustering** identifies overlapping keywords to group these into stories. The **LexRank Summarizer** then extracts the sentences that appear most central to the combined reporting, resulting in a factual core that discards outlier bias.
+Zen News operates on a recursive scavenging loop:
+1. **Scavenge**: Fetch 100+ headlines for the selected region/category.
+2. **Detect**: Identify the most prominent "Modal Topics" via keyword-pair frequency.
+3. **Deep Search**: For each topic, perform a dedicated multi-source query.
+4. **Translate**: Convert all native-language articles to English.
+5. **Triangulate**: Extract the overlapping factual core using LexRank across diverse sources and structure it into scannable points.

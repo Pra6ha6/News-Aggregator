@@ -146,8 +146,11 @@ def main():
                                 
                                 # 3. Source Attribution
                                 st.write("---")
-                                st.write("**Perspective Diversity:**")
-                                source_html = " ".join([f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{s["name"]}</a>' for s in summary_data["sources"][:5]])
+                                st.write("**Perspective Diversity (1 Art/Source):**")
+                                source_html = ""
+                                for s in summary_data["sources"][:5]:
+                                    label = f"🌐 {s['name']}" if s.get('translated') else s['name']
+                                    source_html += f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{label}</a>'
                                 st.markdown(source_html, unsafe_allow_html=True)
                                 
                                 # 4. Bias Meter
