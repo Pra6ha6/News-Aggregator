@@ -119,19 +119,24 @@ def main():
                         summary_data = triangulate_cluster(cluster)
                         if summary_data:
                             with st.container(border=True):
-                                st.subheader(summary_data["title"])
+                                # Header with Title and Depth Badge
+                                h_col1, h_col2 = st.columns([4, 1])
+                                with h_col1: st.subheader(summary_data["title"])
+                                with h_col2: st.caption(f"📊 Data: {summary_data['depth']}")
+                                
                                 st.write(summary_data["factual_core"])
                                 
-                                # Bias Meter (Heuristic)
-                                score = summary_data["bias_score"]
-                                cols = st.columns([1, 4])
-                                with cols[0]: st.caption(f"Bias: {score}/100")
-                                with cols[1]: st.progress(score / 100)
+                                # Source Attribution (New in Phase 10)
+                                st.write("**Contributing Sources:**")
+                                source_html = " ".join([f'<a href="{s["url"]}" target="_blank" style="text-decoration:none; color:#1f77b4; background-color:#f0f2f6; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">{s["name"]}</a>' for s in summary_data["sources"][:5]])
+                                st.markdown(source_html, unsafe_allow_html=True)
                                 
-                                if source_transparency:
-                                    with st.expander("View 3+ Diverse Sources"):
-                                        for art in summary_data["sources"][:5]:
-                                            st.caption(f"[{art.get('source', {}).get('name', 'Source')}]({art.get('url', '#')}) - {art.get('title', 'Untitled')}")
+                                st.divider()
+                                # Bias Meter
+                                score = summary_data["bias_score"]
+                                b_cols = st.columns([1, 4])
+                                with b_cols[0]: st.caption(f"Bias Check: {score}/100")
+                                with b_cols[1]: st.progress(score / 100)
     
     else:
         # Zen Landing Page with Initial Interest Selection
