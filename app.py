@@ -56,24 +56,38 @@ def main():
         with rhs_col:
             st.subheader("Topic Control")
             
-            # Country and Category Selection (RHS Panel)
-            countries = {"United States": "us", "India": "in", "United Kingdom": "gb", "Canada": "ca", "Australia": "au"}
+            from news_manager import COUNTRIES
+            
             # Use session state for persistent defaults
             if "country" not in st.session_state: st.session_state.country = "us"
             if "category" not in st.session_state: st.session_state.category = "general"
+            if "custom_interest" not in st.session_state: st.session_state.custom_interest = ""
             
-            selected_country_name = st.selectbox("Switch Country", options=list(countries.keys()), 
-                                               index=list(countries.values()).index(st.session_state.country))
-            st.session_state.country = countries[selected_country_name]
+            # Country selection (Full List)
+            country_names = sorted(list(COUNTRIES.keys()))
+            default_country_idx = country_names.index([k for k, v in COUNTRIES.items() if v == st.session_state.country][0])
+            selected_country_name = st.selectbox("Switch Country", options=country_names, index=default_country_idx)
+            st.session_state.country = COUNTRIES[selected_country_name]
             
+            # Category and Custom Interest
             categories = ["general", "business", "entertainment", "health", "science", "sports", "technology"]
             selected_category = st.selectbox("Switch Category", options=categories, 
                                            index=categories.index(st.session_state.category))
             st.session_state.category = selected_category
             
+            st.markdown("---")
+            st.write("Custom Interest")
+            custom_q = st.text_input("Enter Topic (e.g. AI, Cricket)", value=st.session_state.custom_interest)
+            if custom_q != st.session_state.custom_interest:
+                st.session_state.custom_interest = custom_q
+                st.rerun()
+            
             st.divider()
             source_transparency = st.toggle("Source Transparency", value=False)
             
+            if st.button("🔄 Force Digest Refresh", use_container_width=True):
+                st.rerun()
+                
             if st.button("Logout / Exit"):
                 st.session_state.connected = False
                 st.session_state.guest_mode = False
@@ -82,7 +96,8 @@ def main():
 
         with main_col:
             st.title("📰 Zen News")
-            st.caption(f"Factual Digest for {st.session_state.country.upper()} • {st.session_state.category.capitalize()}")
+            label = st.session_state.custom_interest if st.session_state.custom_interest else f"{st.session_state.country.upper()} • {st.session_state.category.capitalize()}"
+            st.caption(f"Factual Digest for {label}")
             st.write("---")
             
             # Fetch and Cluster News
@@ -90,11 +105,15 @@ def main():
             from summarizer import cluster_stories, triangulate_cluster
             
             with st.spinner("Synthesizing multi-story factual core..."):
-                all_articles = fetch_top_stories(country=st.session_state.country, category=st.session_state.category)
+                all_articles = fetch_top_stories(
+                    country=st.session_state.country, 
+                    category=st.session_state.category,
+                    query=st.session_state.custom_interest if st.session_state.custom_interest else None
+                )
                 story_clusters = cluster_stories(all_articles)
                 
                 if not story_clusters:
-                    st.warning("No news stories matched the current filters.")
+                    st.warning("No news stories matched the current filters. Try a broader topic or different country.")
                 else:
                     for cluster in story_clusters:
                         summary_data = triangulate_cluster(cluster)
@@ -112,7 +131,7 @@ def main():
                                 if source_transparency:
                                     with st.expander("View 3+ Diverse Sources"):
                                         for art in summary_data["sources"][:5]:
-                                            st.caption(f"[{art['source']['name']}]({art['url']}) - {art['title']}")
+                                            st.caption(f"[{art.get('source', {}).get('name', 'Source')}]({art.get('url', '#')}) - {art.get('title', 'Untitled')}")
     
     else:
         # Zen Landing Page with Initial Interest Selection
@@ -124,9 +143,10 @@ def main():
             
             # Interest Selection BEFORE Guest login
             st.subheader("Select Initial Interests")
+            from news_manager import COUNTRIES
             c_col, cat_col = st.columns(2)
             with c_col:
-                initial_country = st.selectbox("Country", ["United States", "India", "UK"], index=0)
+                initial_country_name = st.selectbox("Country", sorted(list(COUNTRIES.keys())), index=sorted(list(COUNTRIES.keys())).index("United States"))
             with cat_col:
                 initial_category = st.selectbox("Category", ["general", "technology", "politics", "sports"], index=0)
             
@@ -139,8 +159,9 @@ def main():
             with guest_col:
                 if st.button("Continue as Guest", use_container_width=True):
                     st.session_state.guest_mode = True
-                    st.session_state.country = "us" if initial_country == "United States" else "in" if initial_country == "India" else "gb"
+                    st.session_state.country = COUNTRIES[initial_country_name]
                     st.session_state.category = initial_category
+                    st.session_state.custom_interest = ""
                     st.rerun()
 
             st.markdown("""
