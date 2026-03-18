@@ -69,10 +69,10 @@ def main():
             selected_country_name = st.selectbox("Switch Country", options=country_names, index=default_country_idx)
             st.session_state.country = COUNTRIES[selected_country_name]
             
-            # Category and Custom Interest
+            # Sync categories (Must match landing page)
             categories = ["general", "business", "entertainment", "health", "science", "sports", "technology"]
-            selected_category = st.selectbox("Switch Category", options=categories, 
-                                           index=categories.index(st.session_state.category))
+            cat_idx = categories.index(st.session_state.category) if st.session_state.category in categories else 0
+            selected_category = st.selectbox("Switch Category", options=categories, index=cat_idx)
             st.session_state.category = selected_category
             
             st.markdown("---")
@@ -153,7 +153,7 @@ def main():
             with c_col:
                 initial_country_name = st.selectbox("Country", sorted(list(COUNTRIES.keys())), index=sorted(list(COUNTRIES.keys())).index("United States"))
             with cat_col:
-                initial_category = st.selectbox("Category", ["general", "technology", "politics", "sports"], index=0)
+                initial_category = st.selectbox("Category", ["general", "business", "entertainment", "health", "science", "sports", "technology"], index=0)
             
             st.markdown("---")
             
