@@ -1,0 +1,10 @@
+streamlit
+streamlit-google-auth
+supabase
+python-dotenv
+google-generativeai
+requests
+pandas
+sumy
+nltk
+deep-translator
