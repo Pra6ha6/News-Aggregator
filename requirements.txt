@@ -3,9 +3,10 @@ streamlit-google-auth
 supabase
 python-dotenv
 google-generativeai
-requests
+requests==2.31.0
+urllib3==1.26.15
+charset-normalizer==3.2.0
 pandas
 sumy
 nltk
 deep-translator
-urllib3<2.0.0
