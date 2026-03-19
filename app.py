@@ -29,8 +29,12 @@ def main():
     """, unsafe_allow_html=True)
 
     import os
+    # Initial Debug Log
+    redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:8501")
+    print(f"BOOT: Starting app with REDIRECT_URI: {redirect_uri}")
+
     # Environment Check
-    required_secrets = ["SUPABASE_URL", "SUPABASE_KEY", "NEWS_API_KEY", "GEMINI_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+    required_secrets = ["SUPABASE_URL", "SUPABASE_KEY", "NEWS_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "REDIRECT_URI"]
     missing = [s for s in required_secrets if not os.getenv(s)]
     
     if missing:

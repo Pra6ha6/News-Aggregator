@@ -8,3 +8,4 @@ pandas
 sumy
 nltk
 deep-translator
+urllib3<2.0.0
