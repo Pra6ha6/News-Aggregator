@@ -15,32 +15,22 @@ def get_supabase_client() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Google Auth Setup
-def get_auth_manager():
-    # streamlit-google-auth often expects a client_secret.json file.
-    # We can construct it from env vars if needed.
-    redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:8501")
-    google_creds = {
-        "web": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": [redirect_uri]
-        }
-    }
+    # Dynamic Redirect URI Detection
+    env_redirect = os.getenv("REDIRECT_URI")
+    # If on streamlit cloud, we can try to guess or use the env
+    redirect_uri = env_redirect if env_redirect else "http://localhost:8501"
     
-    # Save to a temporary file as streamlit-google-auth often requires a path
-    creds_path = "google_creds.json"
-    with open(creds_path, "w") as f:
-        json.dump(google_creds, f)
-        
+    # Log for user to check in Streamlit Cloud "Logs" tab
+    print(f"DEBUG: Auth Manager initialized with Redirect URI: {redirect_uri}")
+    if not env_redirect:
+        print("WARNING: REDIRECT_URI env var is NOT set. Defaulting to localhost.")
+
     return Authenticate(
         secret_credentials_path=creds_path,
         cookie_name='news_aggregator_auth',
         cookie_key=os.getenv("COOKIE_SECRET", "news_aggregator_secret_key"),
         cookie_expiry_days=30,
-        redirect_uri=redirect_uri, # Use the computed redirect_uri
+        redirect_uri=redirect_uri,
     )
 
 def sync_user_to_supabase(user_info):
