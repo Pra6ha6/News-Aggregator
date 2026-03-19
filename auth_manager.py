@@ -38,9 +38,9 @@ def get_auth_manager():
     return Authenticate(
         secret_credentials_path=creds_path,
         cookie_name='news_aggregator_auth',
-        cookie_key='news_aggregator_secret_key', # Should be in env for production
+        cookie_key=os.getenv("COOKIE_SECRET", "news_aggregator_secret_key"),
         cookie_expiry_days=30,
-        redirect_uri=os.getenv("REDIRECT_URI", "http://localhost:8501"),
+        redirect_uri=redirect_uri, # Use the computed redirect_uri
     )
 
 def sync_user_to_supabase(user_info):
