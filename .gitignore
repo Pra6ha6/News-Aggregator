@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 .streamlit/
 requirements.txt
+.agents
 # Except google_creds.json is already caught by *.json, which is good.
